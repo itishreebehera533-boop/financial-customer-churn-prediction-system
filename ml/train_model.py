@@ -9,6 +9,41 @@ import os
 
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'rf_model.joblib')
 
+TARGET_CANDIDATES = ['exited', 'churn', 'is_churn', 'target', 'label']
+ID_CANDIDATES = ['rownumber', 'customerid', 'customer_id', 'id']
+NAME_CANDIDATES = ['surname', 'name', 'customername', 'customer_name']
+
+
+def normalize_col(name):
+    return name.strip().lower().replace(' ', '').replace('_', '')
+
+
+def find_target_col(columns):
+    normalized = {col: normalize_col(col) for col in columns}
+    for col, key in normalized.items():
+        if key in TARGET_CANDIDATES:
+            return col
+    return columns[-1]
+
+
+def find_display_col(columns):
+    normalized = {col: normalize_col(col) for col in columns}
+    for col, key in normalized.items():
+        if key in NAME_CANDIDATES:
+            return col
+    if 'CustomerId' in columns:
+        return 'CustomerId'
+    return columns[0]
+
+
+def find_drop_cols(columns, target_col):
+    drop_cols = {target_col}
+    normalized = {col: normalize_col(col) for col in columns}
+    for col, key in normalized.items():
+        if key in ID_CANDIDATES or key in NAME_CANDIDATES:
+            drop_cols.add(col)
+    return list(drop_cols)
+
 # Usage: python train_model.py <csv_path>
 def main():
     if len(sys.argv) < 2:
@@ -19,15 +54,29 @@ def main():
     # Read only first 1000 rows for demo speed
     df = pd.read_csv(csv_path, nrows=1000)
 
-    # Basic preprocessing: drop rows with missing values
+    # Basic preprocessing
     df = df.dropna()
+    if df.empty:
+        raise ValueError('Dataset is empty after removing missing rows')
 
-    # Assume last column is label, first column is customer name (optional)
-    feature_cols = df.columns[1:-1]
-    X = df[feature_cols]
-    y = df[df.columns[-1]]
+    target_col = find_target_col(list(df.columns))
+    display_col = find_display_col(list(df.columns))
+    drop_cols = find_drop_cols(list(df.columns), target_col)
 
-    # Encode categorical features if any
+    y = df[target_col]
+    # Handle common string labels
+    if y.dtype == object:
+        y_map = {'yes': 1, 'true': 1, 'churn': 1, '1': 1, 'no': 0, 'false': 0, '0': 0}
+        y = y.astype(str).str.strip().str.lower().map(y_map)
+    y = pd.to_numeric(y, errors='coerce')
+
+    valid_rows = y.notna()
+    X = df.loc[valid_rows].drop(columns=[c for c in drop_cols if c in df.columns])
+    y = y.loc[valid_rows].astype(int)
+
+    if y.nunique() != 2:
+        raise ValueError(f"Target column '{target_col}' must be binary (0/1). Found {y.nunique()} unique values.")
+
     X = pd.get_dummies(X)
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -35,12 +84,23 @@ def main():
     clf = RandomForestClassifier(n_estimators=10, random_state=42)
     clf.fit(X_train, y_train)
 
-    # Save model
-    joblib.dump({'model': clf, 'features': list(X.columns)}, MODEL_PATH)
+    # Save model with metadata for prediction-time preprocessing
+    joblib.dump(
+        {
+            'model': clf,
+            'features': list(X.columns),
+            'target_col': target_col,
+            'drop_cols': drop_cols,
+            'display_col': display_col
+        },
+        MODEL_PATH
+    )
 
     # Print metrics for demo
     y_pred = clf.predict(X_test)
     print('Training complete!')
+    print(f'Target column: {target_col}')
+    print(f'Display column: {display_col}')
     print(classification_report(y_test, y_pred))
     print(f'Model saved to {MODEL_PATH}')
 

@@ -24,6 +24,12 @@ const ChurnPrediction = () => {
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
+    if (selectedFile && !selectedFile.name.toLowerCase().endsWith('.csv')) {
+      setFile(null);
+      setBulkResult(null);
+      setBulkError('Only CSV files are supported.');
+      return;
+    }
     setFile(selectedFile);
     setBulkResult(null);
     setBulkError('');
@@ -59,16 +65,16 @@ const ChurnPrediction = () => {
           <input
             type="file"
             id="file-upload"
-            accept=".csv,.xlsx,.xls"
+            accept=".csv"
             onChange={handleFileChange}
             style={styles.fileInput}
           />
           <label htmlFor="file-upload" style={styles.fileLabel}>
             <span style={styles.uploadIcon}>📁</span>
-            {file ? file.name : 'Choose CSV or Excel file'}
+            {file ? file.name : 'Choose CSV file'}
           </label>
           <p style={styles.uploadHint}>
-            Supported formats: .csv, .xlsx (max 50MB)
+            Supported format: .csv (max 50MB)
           </p>
         </div>
 
@@ -96,7 +102,7 @@ const ChurnPrediction = () => {
                   <tr key={idx} style={{ background: idx % 2 === 0 ? colors.white : colors.lightBg }}>
                     <td style={styles.tableCell}>{row.name}</td>
                     <td style={styles.tableCell}>{row.prediction}</td>
-                    <td style={styles.tableCell}>{row.probability ? row.probability.toFixed(2) : '-'}</td>
+                    <td style={styles.tableCell}>{Number.isFinite(row.probability) ? row.probability.toFixed(2) : '-'}</td>
                   </tr>
                 ))}
               </tbody>

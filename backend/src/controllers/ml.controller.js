@@ -25,6 +25,14 @@ const resolvePythonCommand = () => {
 
 const PYTHON_CMD = resolvePythonCommand();
 
+const formatPythonFailure = (output, fallbackMessage) => {
+  if (!output) return fallbackMessage;
+  if (output.includes("No module named")) {
+    return `Missing Python dependency. Run: python -m pip install -r ml/requirements.txt`;
+  }
+  return fallbackMessage;
+};
+
 // ADMIN: Upload dataset and train model
 export const adminUploadDataset = [
   (req, res, next) => {
@@ -60,7 +68,8 @@ export const adminTrainModel = async (req, res) => {
       if (code === 0) {
         res.json({ success: true, message: 'Model trained', output });
       } else {
-        res.status(500).json({ success: false, message: 'Training failed', output });
+        const message = formatPythonFailure(output, 'Training failed');
+        res.status(500).json({ success: false, message, output });
       }
     });
   } catch (err) {
@@ -88,7 +97,8 @@ export const adminBatchPredict = async (req, res) => {
         });
         res.json({ success: true, results });
       } else {
-        res.status(500).json({ success: false, message: 'Batch prediction failed', output });
+        const message = formatPythonFailure(output, 'Batch prediction failed');
+        res.status(500).json({ success: false, message, output });
       }
     });
   } catch (err) {
@@ -118,7 +128,8 @@ export const adminPredictionSummary = async (req, res) => {
         const notChurn = total - churn;
         res.json({ success: true, summary: { total, churn, notChurn }, results });
       } else {
-        res.status(500).json({ success: false, message: 'Summary failed', output });
+        const message = formatPythonFailure(output, 'Summary failed');
+        res.status(500).json({ success: false, message, output });
       }
     });
   } catch (err) {
@@ -145,7 +156,8 @@ export const bankSinglePredict = async (req, res) => {
           res.status(500).json({ success: false, message: 'Invalid prediction output', output });
         }
       } else {
-        res.status(500).json({ success: false, message: 'Prediction failed', output });
+        const message = formatPythonFailure(output, 'Prediction failed');
+        res.status(500).json({ success: false, message, output });
       }
     });
   } catch (err) {
@@ -156,9 +168,16 @@ export const bankSinglePredict = async (req, res) => {
 // BANK: Batch prediction
 export const bankBatchPredict = async (req, res) => {
   try {
-    const { filename } = req.body;
-    const csvPath = path.join(UPLOADS_DIR, filename);
-    if (!fs.existsSync(csvPath)) return res.status(404).json({ success: false, message: 'CSV not found' });
+    const csvPath = req.file?.path || (req.body?.filename ? path.join(UPLOADS_DIR, req.body.filename) : null);
+    if (!csvPath || !fs.existsSync(csvPath)) {
+      return res.status(404).json({ success: false, message: 'CSV not found' });
+    }
+
+    const sourceName = req.file?.originalname || req.body?.filename || '';
+    if (sourceName && path.extname(sourceName).toLowerCase() !== '.csv') {
+      return res.status(400).json({ success: false, message: 'Only CSV files are supported' });
+    }
+
     const py = spawn(PYTHON_CMD, [path.join(ML_DIR, 'predict.py'), csvPath]);
     let output = '';
     py.stdout.on('data', (data) => { output += data.toString(); });
@@ -171,7 +190,13 @@ export const bankBatchPredict = async (req, res) => {
         });
         res.json({ success: true, results });
       } else {
-        res.status(500).json({ success: false, message: 'Batch prediction failed', output });
+        const message = formatPythonFailure(output, 'Batch prediction failed');
+        res.status(500).json({ success: false, message, output });
+      }
+
+      // Remove temp upload written by multer for bank flow.
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
       }
     });
   } catch (err) {
