@@ -19,15 +19,8 @@ import PredictionHistory from './PredictionHistory';
 
 const colors = {
   primary: '#001845',
-  secondary: '#023E7D',
-  accent: '#0466C8',
-  muted: '#5C677D',
   white: '#ffffff',
-  lightBg: '#f8fafc',
-  border: '#e2e8f0',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#ef4444'
+  border: '#e2e8f0'
 };
 
 const PIE_COLORS = [colors.danger, colors.success, colors.warning];

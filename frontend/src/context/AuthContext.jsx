@@ -1,7 +1,33 @@
-import { createContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getProfile } from '../services/api';
 
-export const AuthContext = createContext();
+import { AuthContext } from './auth-context';
+
+const PREFS_KEY = 'user_profile_prefs';
+
+const getStoredPrefs = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+  } catch {
+    return {};
+  }
+};
+
+const getUserPrefs = (email) => {
+  if (!email) return {};
+  const allPrefs = getStoredPrefs();
+  return allPrefs[email] || {};
+};
+
+const saveUserPrefs = (email, patch) => {
+  if (!email) return;
+  const allPrefs = getStoredPrefs();
+  allPrefs[email] = {
+    ...(allPrefs[email] || {}),
+    ...patch,
+  };
+  localStorage.setItem(PREFS_KEY, JSON.stringify(allPrefs));
+};
 
 const PREFS_KEY = 'user_profile_prefs';
 
