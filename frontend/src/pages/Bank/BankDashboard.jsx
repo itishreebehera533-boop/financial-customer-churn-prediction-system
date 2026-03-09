@@ -311,8 +311,8 @@ useEffect(() => {
   const [churnData, setChurnData] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    if (!user) navigate("/login");
-  }, [user, navigate]);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(sessions));
+  }, [sessions]);
 
 
   useEffect(() => {
