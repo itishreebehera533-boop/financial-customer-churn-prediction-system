@@ -206,9 +206,9 @@ const UploadDatasetSection = () => {
           <input type="file" id="file-upload" accept=".csv" onChange={handleFileChange} style={uploadStyles.fileInput} />
           <label htmlFor="file-upload" style={uploadStyles.fileLabel}>
             <span style={uploadStyles.uploadIcon}>📁</span>
-            {file ? file.name : 'Choose CSV file'}
+            {file ? file.name : 'Choose Supported File'}
           </label>
-          <p style={uploadStyles.uploadHint}>Supported format: .csv (max 50MB)</p>
+          <p style={uploadStyles.uploadHint}>Supported format: .csv/.xlsx/.xlx (max 50MB)</p>
         </div>
 
         <div style={uploadStyles.actionRow}>
@@ -489,20 +489,7 @@ useEffect(() => {
 
               <UploadDatasetSection />
 
-              <div style={styles.cardContainer}>
-                <h3 style={styles.cardTitle}>Upload Dataset</h3>
-                <form onSubmit={handleRunPrediction}>
-                  <input type="file" accept=".csv,.xlsx,.xls" onChange={handleFileChange} style={{ marginBottom: 12 }} />
-                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <button style={styles.primaryBtn} type="submit" disabled={!file || bulkLoading}>{bulkLoading ? 'Processing...' : 'Run Prediction'}</button>
-                    {pendingSession && <button type="button" style={styles.secondaryBtn} onClick={saveSessionResult}>Save Session Result</button>}
-                    {!!sessions.length && <button type="button" style={styles.dangerBtn} onClick={clearSavedSessions}>Clear Sessions</button>}
-                  </div>
-                </form>
-                {bulkError && <p style={{ color: colors.danger, marginTop: 10 }}>{bulkError}</p>}
-                {pendingSession && <p style={{ color: colors.warning, marginTop: 10 }}>Prediction is ready. Click "Save Session Result" to persist it.</p>}
-              </div>
-
+          
               <div style={styles.grid}>
                 <div style={styles.cardContainer}><h3 style={styles.cardTitle}>Bar Chart</h3><ResponsiveContainer width="100%" height={250}><BarChart data={displaySession.stats?.barData || zeroStats.barData}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis allowDecimals={false} /><Tooltip /><Bar dataKey="value" fill={colors.accent} /></BarChart></ResponsiveContainer></div>
                 <div style={styles.cardContainer}><h3 style={styles.cardTitle}>Pie Chart</h3><ResponsiveContainer width="100%" height={250}><PieChart><Pie data={displaySession.stats?.pieData || zeroStats.pieData} dataKey="value" nameKey="name" label>{(displaySession.stats?.pieData || zeroStats.pieData).map((entry, index) => (<Cell key={entry.name || index} fill={PIE_COLORS[index % PIE_COLORS.length]} />))}</Pie><Tooltip /><Legend /></PieChart></ResponsiveContainer></div>
